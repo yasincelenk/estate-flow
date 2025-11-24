@@ -1,20 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 
 export function createClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (!url || !key) {
+    console.warn('Supabase keys missing!')
+  }
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    key,
     {
       cookies: {
         getAll() {
-          // This will be handled by the middleware
           return []
         },
         setAll(_cookiesToSet) {
-          // This will be handled by the middleware
-          // The `setAll` method was called from a Server Component
-          // This can be ignored if you have middleware refreshing
-          // user sessions
         },
       },
     }
