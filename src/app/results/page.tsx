@@ -9,7 +9,7 @@ import Navbar from "@/components/Navbar";
 function ResultsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { resultData, scrapedData, editableContent, updateEditableContent, generatedModules } = useResults();
+  const { resultData, scrapedData, editableContent, updateEditableContent, generatedModules, setResults } = useResults();
   const [activeTab, setActiveTab] = useState('social');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,14 +21,62 @@ function ResultsContent() {
     }
   }, [searchParams]);
 
+  const [manualText, setManualText] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
   if (!resultData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No results found. Please generate content first.</p>
-          <Button onClick={() => router.push('/')} className="mt-4">
-            Go Back
-          </Button>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 max-w-3xl py-12">
+          <div className="bg-white p-6 rounded-lg border">
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">Content Not Auto-Readable</h1>
+            <p className="text-gray-700 mb-4">Could not auto-read this Zillow link. Please copy the property description and paste it manually.</p>
+            {errorMessage && (
+              <div className="text-red-600 mb-3 text-sm">{errorMessage}</div>
+            )}
+            <textarea
+              value={manualText}
+              onChange={(e) => setManualText(e.target.value)}
+              placeholder="Paste the property description, features, and any details"
+              className="w-full h-48 border rounded p-3 text-gray-800"
+            />
+            <div className="flex gap-3 mt-4">
+              <Button
+                onClick={async () => {
+                  if (!manualText.trim()) {
+                    setErrorMessage('Please paste the property description');
+                    return;
+                  }
+                  setIsLoading(true);
+                  setErrorMessage('');
+                  try {
+                    const res = await fetch('/api/generate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ url: 'manual', manualText, modules: ['all'] })
+                    });
+                    const data = await res.json();
+                    if (!res.ok || data.error) {
+                      setErrorMessage('Unable to generate content from the pasted text');
+                      setIsLoading(false);
+                      return;
+                    }
+                    setResults({ resultData: data.data, scrapedData: data.scrapedData, modules: data.modules || ['all'] });
+                    setIsLoading(false);
+                    router.push('/results?tab=social');
+                  } catch (err) {
+                    setErrorMessage('Network error. Please try again');
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Generating...' : 'Generate Content'}
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/')}>Back to Home</Button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -154,7 +202,7 @@ function ResultsContent() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            Social Media
+            Social Media Studio
           </button>
           <button
             onClick={() => setActiveTab('email')}

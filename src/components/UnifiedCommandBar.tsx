@@ -37,7 +37,7 @@ export default function UnifiedCommandBar({ onGenerate, isLoading = false }: Uni
   const modes = [
     {
       id: 'link' as const,
-      label: 'Social Studio',
+      label: 'Social Media Studio',
       placeholder: 'Paste Zillow or Redfin URL for viral social content...',
       color: 'orange',
       icon: LayoutTemplate,

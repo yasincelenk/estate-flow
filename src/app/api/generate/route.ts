@@ -98,7 +98,8 @@ async function scrapeWithFirecrawl(url: string): Promise<ScrapedData> {
       },
       body: JSON.stringify({
         url: url,
-        formats: ['markdown']
+        formats: ['markdown'],
+        waitFor: 5000
       }),
       signal: controller.signal
     });
@@ -315,9 +316,11 @@ async function generateSocialMediaContent(listingData: ScrapedData, modules: Mod
 
 You are analyzing a property listing from ${platformContext}. The listing content is provided in Markdown format below.
 
-Your task is to:
-1. Extract key property details from the Markdown content (beds, baths, sqft, price, location, features, amenities)
-2. Generate a JSON response with the requested fields based on the modules parameter.
+First, decide if the markdown is a real property listing with description, price and features, or if it is a navigation, login or error page.
+If it looks like navigation, login or error (contains mostly terms like Skip navigation, Sign In, Loan), return {"error":"Scraping blocked or content not found"}.
+If valid, ignore headers and footers and extract only description, price and features.
+
+Your task is to extract key property details and generate a JSON response with the requested fields based on the modules parameter.
 
 `;
 
@@ -378,6 +381,9 @@ ${listingData.content}`;
     }
 
     const parsedResponse = JSON.parse(responseText);
+    if (parsedResponse && typeof parsedResponse === 'object' && parsedResponse.error) {
+      throw new Error(String(parsedResponse.error));
+    }
     
     // Validate the response structure and ensure all values are strings
     if (!parsedResponse.property_title || !parsedResponse.property_summary || !parsedResponse.instagram || !parsedResponse.linkedin || !parsedResponse.tiktok || !parsedResponse.mls_description || !parsedResponse.email_blast || !parsedResponse.marketing_headline || !parsedResponse.features) {
