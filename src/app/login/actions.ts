@@ -13,10 +13,13 @@ export async function login(formData: FormData) {
     throw new Error('Email is required')
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const redirectUrl = `${baseUrl}/auth/callback`
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: getAuthRedirectURL('/auth/callback'),
+      emailRedirectTo: redirectUrl,
     },
   })
 
