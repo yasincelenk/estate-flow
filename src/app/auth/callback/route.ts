@@ -1,43 +1,43 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import { getFullURL } from "@/utils/get-url"
+import { cookies } from "next/headers"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/results'
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin
+  const siteUrl = 'https://estate-flow-ai.vercel.app'
 
-  if (!code) {
-    return NextResponse.redirect(getFullURL('/auth/auth-code-error'))
+  console.log('Auth Code received:', code)
+
+  if (code) {
+    const cookieStore = await (cookies() as any)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return (cookieStore as any).get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            (cookieStore as any).set(name, value, options)
+          },
+          remove(name: string, options: any) {
+            (cookieStore as any).set(name, '', options)
+          },
+        },
+      }
+    )
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error) {
+      return NextResponse.redirect(`${siteUrl}${next}`)
+    } else {
+      console.log('Exchange Error:', error)
+    }
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-  let cookiesToSet: { name: string; value: string; options: any }[] = []
-
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll()
-      },
-      setAll(c) {
-        cookiesToSet = c
-      },
-    },
-  })
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-  if (error) {
-    console.error('Auth code exchange failed:', error.message)
-    return NextResponse.redirect(new URL('/auth/auth-code-error', origin))
-  }
-
-  const redirectResponse = NextResponse.redirect(new URL(next, origin))
-  cookiesToSet.forEach(({ name, value, options }) => {
-    redirectResponse.cookies.set(name, value, options)
-  })
-  return redirectResponse
+  return NextResponse.redirect(`${siteUrl}/login?error=auth`)
 }
