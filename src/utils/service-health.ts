@@ -137,8 +137,8 @@ export function calculateBackoffDelay(retryCount: number, baseDelay = 1000): num
 export function isRetryableError(response: Response, errorData?: Record<string, unknown>): boolean {
   return response.status >= 500 || 
          response.status === 429 || 
-         errorData?.error?.includes('timeout') ||
-         errorData?.error?.includes('unavailable');
+         String((errorData as { error?: unknown })?.error || '').includes('timeout') ||
+         String((errorData as { error?: unknown })?.error || '').includes('unavailable');
 }
 
 /**
